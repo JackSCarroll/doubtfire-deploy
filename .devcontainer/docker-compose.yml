@@ -11,17 +11,36 @@ services:
       # mounts are relative to the first file in the list, which is a level up.
       - ..:/workspace:cached
       - formatif_tmp_compose:/workspace/tmp
-      - formatif_student-work_compose:/student-work
+      - student-work:/student-work
+      - jplag_results:/jplag_results
       - ws_node_modules:/workspace/node_modules
       - web_node_modules:/workspace/doubtfire-web/node_modules
       - formatif_db_compose:/var/lib/mysql
       - formatif_gems_compose:/home/vscode/.gems
+      - /var/run/docker.sock:/var/run/docker.sock
     ports:
       - "9876:9876"
       - "4200:4200"
       - "3000:3000"
     # Overrides default command so things don't shut down after the process ends.
     command: /bin/sh -c "while sleep 5000; do :; done"
+    env_file:
+      - ./devcontainer.env
+
+  # JPlag
+  jplag:
+    container_name: jplag
+    build:
+      context: ../jplag
+      dockerfile: jplag.Dockerfile
+    volumes:
+      - student-work:/student-work
+      - jplag_data:/jplag
+      - jplag_results:/jplag/results
+      - ../doubtfire-api/tmp/jplag:/tmp/jplag
+    command: /bin/sh -c "while sleep 5000; do :; done"
+    depends_on:
+      - formatif-dev-container
     env_file:
       - ./devcontainer.env
 
@@ -42,28 +61,12 @@ services:
     env_file:
       - ./devcontainer.env
 
-  # Database server - could be external to docker
-  doubtfire-db:
-    image: mariadb:10
-    volumes:
-      - mysql_db:/var/lib/mysql
-
-  redis-sidekiq:
-    container_name: doubtfire-redis-sidekiq
-    image: redis:7.0
-    volumes:
-      - redis_sidekiq_data:/data
-    env_file:
-      - ./devcontainer.env
-
 volumes:
   ws_node_modules:
   web_node_modules:
   formatif_tmp_compose:
-  formatif_student-work_compose:
+  student-work: {}
   formatif_db_compose:
   formatif_gems_compose:
-  redis_sidekiq_data:
-  doubtfire_logs: {}
-  mysql_db: {}
-  student_work: {}
+  jplag_data:
+  jplag_results:
